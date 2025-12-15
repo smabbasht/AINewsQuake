@@ -1,2 +1,6 @@
 # AINewsQuake
 An Event-Driven Data Pipeline for Quantifying Market Reaction to AI Headlines
+
+In modern financial markets, information is the primary driver of volatility, yet integrating unstructured news data ("slow data") with high-frequency market microstructure ("fast data") remains a significant data engineering challenge. AINewsQuake is a data management Proof-of-Concept designed to measure the immediate impact of Artificial Intelligence-related news on the stock prices of the "AI 10" sector leaders (eg, NVDA, MSFT, GOOGL, PLTR etc.).
+
+Leveraging the [Financial Modeling Prep (FMP) API](https://site.financialmodelingprep.com/) for semantic event detection and the [Databento API](https://databento.com/) for nanosecond-precision market data, this project constructs a unified ETL pipeline. The system ingests continuous 1-minute OHLCV bars for the entirety of 2025, normalizes timestamps across disparate time zones, and "overlays" discrete news events onto the time-series data. The resulting dataset is stored in a normalized TimescaleDB schema, enabling the precise visualization of market "aftershocks"—volume spikes and volatility expansion that occur in the minutes following a major AI headline.
