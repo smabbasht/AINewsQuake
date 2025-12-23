@@ -22,8 +22,8 @@ from src.components.navbar import render_navbar
 
 # Page configuration
 st.set_page_config(
-    page_title="Price Chart - AINewsQuake",
-    page_icon="📊",
+    page_title="AINewsQuake",
+    page_icon="🌋",
     layout="wide",
 )
 

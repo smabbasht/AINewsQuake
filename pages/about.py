@@ -13,8 +13,8 @@ from src.components.navbar import render_navbar
 
 # Page config
 st.set_page_config(
-    page_title="About - AINewsQuake",
-    page_icon="ℹ️",
+    page_title="AINewsQuake",
+    page_icon="🌋",
     layout="wide",
 )
 
