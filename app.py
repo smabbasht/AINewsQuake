@@ -7,6 +7,8 @@ Modern dashboard for exploring AI news impact on stock volatility.
 import os
 from datetime import date, datetime, timedelta
 from typing import Tuple
+import sys
+from pathlib import Path
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -14,81 +16,22 @@ from plotly.subplots import make_subplots
 import streamlit as st
 from dotenv import load_dotenv
 
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from src.components.navbar import render_navbar
+
 # Load environment variables
 load_dotenv()
 
 # Page configuration
 st.set_page_config(
-    page_title="AINewsQuake - News Impact Explorer",
-    page_icon="🌋",
+    page_title="Price Chart - AINewsQuake",
+    page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded",
 )
 
-# Custom CSS
-st.markdown(
-    """
-    <style>
-    /* Dark theme styling */
-    .main {
-        background-color: #0e1117;
-    }
-    
-    /* Header styling */
-    .main-header {
-        font-size: 3.5rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-align: center;
-        margin-bottom: 0.5rem;
-        letter-spacing: -1px;
-    }
-    
-    .subtitle {
-        text-align: center;
-        color: #a0aec0;
-        font-size: 1.1rem;
-        margin-bottom: 2rem;
-        font-weight: 300;
-    }
-    
-    /* Metric cards */
-    .metric-card {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-        border: 1px solid rgba(102, 126, 234, 0.2);
-        padding: 1.2rem;
-        border-radius: 12px;
-        backdrop-filter: blur(10px);
-    }
-    
-    /* News marker styling */
-    .news-positive {
-        color: #48bb78;
-    }
-    
-    .news-negative {
-        color: #f56565;
-    }
-    
-    .news-neutral {
-        color: #ed8936;
-    }
-    
-    /* Streamlit overrides */
-    .stPlotlyChart {
-        background-color: transparent !important;
-    }
-    
-    div[data-testid="stMetricValue"] {
-        font-size: 2rem;
-        font-weight: 600;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# Render navbar
+render_navbar("Chart")
 
 
 @st.cache_resource
@@ -334,7 +277,7 @@ def create_price_chart_with_news(news_df: pd.DataFrame, market_df: pd.DataFrame,
     # Update layout
     fig.update_layout(
         height=900,
-        template='plotly_dark',
+        template='plotly_white',
         hovermode='x unified',
         showlegend=True,
         legend=dict(
@@ -360,44 +303,23 @@ def create_price_chart_with_news(news_df: pd.DataFrame, market_df: pd.DataFrame,
 def main():
     """Main Streamlit application."""
     
-    # Header
-    st.markdown('<h1 class="main-header">🌋 AINewsQuake</h1>', unsafe_allow_html=True)
-    st.markdown(
-        '<p class="subtitle">Explore how AI news creates market earthquakes</p>',
-        unsafe_allow_html=True,
-    )
+    # Page title
+    st.title("📊 Price Chart with News Annotations")
+    st.markdown("Interactive candlestick chart showing news sentiment markers")
     
-    # Sidebar
-    st.sidebar.header("🎯 Configuration")
-    
-    # Ticker selection
-    all_tickers = ["NVDA", "TSLA", "MSFT", "GOOGL", "AAPL", "AMD", "PLTR", "TSM", "SMCI", "META"]
-    
-    selected_ticker = st.sidebar.selectbox(
-        "Select Ticker",
-        all_tickers,
-        index=0,
-    )
-    
-    # Date range selection
-    st.sidebar.subheader("📅 Date Range")
-    
-    default_end = date(2025, 12, 15)  # Latest available data
+    # Collapsible filters
+    all_tickers = ["NVDA", "TSLA", "MSFT", "GOOGL", "AAPL", "AMZN", "AMD", "PLTR", "TSM", "SMCI", "META", "BLK"]
+    default_end = date(2025, 12, 15)
     default_start = date(2025, 1, 1)
-    
-    from_date = st.sidebar.date_input(
-        "From Date",
-        value=default_start,
-        min_value=date(2025, 1, 1),
-        max_value=default_end,
-    )
-    
-    to_date = st.sidebar.date_input(
-        "To Date",
-        value=default_end,
-        min_value=from_date,
-        max_value=default_end,
-    )
+
+    with st.expander("⚙️ Chart Configuration", expanded=False):
+        f_col1, f_col2, f_col3 = st.columns(3)
+        with f_col1:
+            selected_ticker = st.selectbox("Select Ticker", all_tickers, index=0)
+        with f_col2:
+            from_date = st.date_input("From Date", value=default_start, min_value=date(2025, 1, 1), max_value=default_end)
+        with f_col3:
+            to_date = st.date_input("To Date", value=default_end, min_value=from_date, max_value=default_end)
     
     # Fetch data
     with st.spinner(f"Loading data for {selected_ticker}..."):
@@ -427,13 +349,13 @@ def main():
         if not news_df.empty:
             avg_sentiment = news_df['sentiment_score'].mean()
             st.metric(
-                "📊 Avg Sentiment",
+                "🙃 Avg Sentiment",
                 f"{avg_sentiment:.3f}",
                 delta=f"{'Bullish' if avg_sentiment > 0 else 'Bearish'}",
                 help="Average sentiment score (-1 to +1)"
             )
         else:
-            st.metric("📊 Avg Sentiment", "N/A")
+            st.metric("🙃 Avg Sentiment", "N/A")
     
     with col3:
         if not market_df.empty:
@@ -458,49 +380,12 @@ def main():
         else:
             st.metric("📈 Total Volume", "N/A")
     
-    st.markdown("---")
-    
     # Main chart
     if not market_df.empty:
-        st.subheader("📊 Interactive Price Chart with News Annotations")
-        st.markdown(
-            "🔍 **Hover over news markers** to see headlines and sentiment scores. "
-            "**Zoom and pan** to explore specific time periods."
-        )
-        
         fig = create_price_chart_with_news(news_df, market_df, selected_ticker)
         st.plotly_chart(fig, width='stretch')
     else:
         st.info("📊 No market data available for visualization.")
-    
-    # News table
-    if not news_df.empty:
-        st.markdown("---")
-        st.subheader("📋 Recent News Events")
-        
-        # Format for display
-        display_df = news_df.copy()
-        display_df['published_at'] = pd.to_datetime(display_df['published_at']).dt.strftime('%Y-%m-%d %H:%M')
-        display_df['sentiment_score'] = display_df['sentiment_score'].round(3)
-        display_df = display_df.sort_values('published_at', ascending=False)
-        
-        # Add sentiment label
-        display_df['sentiment_label'] = display_df['sentiment_score'].apply(
-            lambda x: '🟢 Positive' if x > 0.05 else ('🔴 Negative' if x < -0.05 else '🟡 Neutral')
-        )
-        
-        st.dataframe(
-            display_df[['published_at', 'headline', 'sentiment_score', 'sentiment_label', 'source']].head(20),
-            width='stretch',
-            hide_index=True,
-            column_config={
-                "published_at": "Date & Time",
-                "headline": st.column_config.TextColumn("Headline", width="large"),
-                "sentiment_score": st.column_config.NumberColumn("Sentiment", format="%.3f"),
-                "sentiment_label": "Category",
-                "source": "Source",
-            }
-        )
 
 
 if __name__ == "__main__":
