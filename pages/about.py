@@ -165,29 +165,31 @@ st.markdown("---")
 # Architecture
 st.markdown("### 🏛️ Architecture")
 
-col1, col2 = st.columns([1, 1])
+col1, col2 = st.columns([1, 1], gap="large")
 
 with col1:
-    st.markdown("""
-    **Repository-Service Pattern**
-    
-    - **Adapters** → Wrap external APIs (Finnhub, Databento)
-    - **Services** → Orchestrate ETL pipeline
-    - **Repositories** → Handle database operations
-    - **Components** → Reusable UI elements
-    
-    **Why?** Clean separation of concerns, easy to swap data sources
-    """)
+    with st.container(border=True):
+        st.markdown("""
+        **Repository-Service Pattern**
+        
+        - **Adapters** → Wrap external APIs (Finnhub)
+        - **Services** → Orchestrate ETL pipeline
+        - **Repositories** → Handle database operations
+        - **Components** → Reusable UI elements
+        
+        **Why?** Clean separation of concerns, easy to swap data sources
+        """)
 
 with col2:
-    st.markdown("""
-    **Key Features**
-    
-    ✅ Idempotent ETL  
-    ✅ Smart backfill  
-    ✅ Time-series optimized  
-    ✅ Real-time dashboard  
-    """)
+    with st.container(border=True):
+        st.markdown("""
+        **Key Features**
+        
+        ✅ Idempotent ETL  
+        ✅ Smart backfill  
+        ✅ Time-series optimized  
+        ✅ Real-time dashboard  
+        """)
 
 st.markdown("---")
 
