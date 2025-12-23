@@ -20,15 +20,16 @@ from dotenv import load_dotenv
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.components.navbar import render_navbar
 
-# Load environment variables
-load_dotenv()
-
 # Page configuration
 st.set_page_config(
     page_title="Price Chart - AINewsQuake",
     page_icon="📊",
     layout="wide",
 )
+
+# Load environment variables
+load_dotenv()
+
 
 # Render navbar
 render_navbar("Chart")

@@ -19,15 +19,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.components.navbar import render_navbar
 
-# Load environment
-load_dotenv()
-
 # Page config
 st.set_page_config(
     page_title="Analytics - AINewsQuake",
     page_icon="📈",
     layout="wide",
 )
+
+# Load environment
+load_dotenv()
+
 
 # Render navbar
 render_navbar("Analytics")

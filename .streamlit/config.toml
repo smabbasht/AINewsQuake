@@ -1,0 +1,13 @@
+[theme]
+base="light"
+primaryColor="#667eea"
+backgroundColor="#ffffff"
+secondaryBackgroundColor="#f8f9fa"
+textColor="#2d3748"
+
+[ui]
+hideSidebarNav = true
+
+[client]
+showSidebarNavigation = false
+initialSidebarState = "collapsed"
