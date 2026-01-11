@@ -1,0 +1,299 @@
+
+\documentclass[aspectratio=169]{beamer}
+
+% ---------- Theme ----------
+\usetheme{Madrid}
+\usecolortheme{default}
+\usefonttheme{professionalfonts}
+
+% ---------- Packages ----------
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{ragged2e}
+
+% ---------- Colors ----------
+\definecolor{Primary}{HTML}{1F4E79}
+\definecolor{Secondary}{HTML}{2E75B6}
+
+\setbeamercolor{title}{fg=white,bg=Primary}
+\setbeamercolor{frametitle}{fg=white,bg=Primary}
+\setbeamercolor{structure}{fg=Secondary}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=Primary,
+  urlcolor=Secondary
+}
+
+
+% ---------- Custom Footline (prevents truncation) ----------
+\setbeamertemplate{footline}{
+  \leavevmode%
+  \hbox{%
+  \begin{beamercolorbox}[wd=.80\paperwidth,ht=2.4ex,dp=1.2ex,leftskip=0.8em]{author in head/foot}%
+    \usebeamerfont{author in head/foot}\insertshortauthor\hspace{0.6em}\textcolor{Secondary}{\footnotesize\textbar}\hspace{0.6em}\insertshortinstitute
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.20\paperwidth,ht=2.4ex,dp=1.2ex,right,rightskip=0.8em]{title in head/foot}%
+    \usebeamerfont{title in head/foot}\insertshorttitle\hspace{0.8em}\insertframenumber/\inserttotalframenumber
+  \end{beamercolorbox}}%
+  \vskip0pt%
+}
+\setbeamertemplate{navigation symbols}{}
+
+% ---------- Commands ----------
+\newcommand{\projectname}{\textbf{AINewsQuake}}
+\newcommand{\repo}{\href{https://github.com/smabbasht/ainewsquake}{github.com/smabbasht/ainewsquake}}
+
+% ---------- Logo ----------
+\titlegraphic{
+\vspace{-0.2cm}
+\includegraphics[height=1.3cm]{Milano-Bicocca_University_logo_on_transparent_background.svg.png}
+}
+
+% ---------- Title Info ----------
+\title[\projectname]{\projectname\\\small Price Chart with News Annotations}
+\subtitle{Data Management Project Presentation}
+\author[Syed Muhammad Abbas Haider Taqvi \textbar\ Umeir Mohamed \textbar\ Mohammad Amin Saberi]{Syed Muhammad Abbas Haider Taqvi \and Umeir Mohamed \and Mohammad Amin Saberi}
+\institute[University of Milano-Bicocca (UNIMIB)]{University of Milano-Bicocca (UNIMIB)}
+\date{\today}
+
+\begin{document}
+
+% ---------- Title Slide ----------
+\begin{frame}
+  \titlepage
+\end{frame}
+
+% ---------- Agenda ----------
+\begin{frame}{Agenda}
+\begin{itemize}
+  \item Motivation \& Objectives
+  \item Research Questions
+  \item Data Sources \& Acquisition
+  \item Storage \& Database Design
+  \item Data Quality \& Integration
+  \item Dashboard \& Analysis
+  \item Limitations \& Future Work
+  \item Conclusion
+\end{itemize}
+\end{frame}
+
+% ---------- Motivation ----------
+\begin{frame}{Motivation}
+\justifying
+Financial markets react quickly to information. AI-related headlines can trigger significant short-term price movements, volatility spikes, and abnormal trading volumes.
+
+\vspace{0.4cm}
+\textbf{Goal:} Build a reproducible data management pipeline that integrates \textbf{AI news sentiment} with \textbf{high-frequency market data} and enables interactive exploration of their relationship.
+\end{frame}
+
+% ---------- Objectives ----------
+\begin{frame}{Objectives}
+\begin{itemize}
+  \item Acquire heterogeneous data: \textbf{news events} + \textbf{1-min OHLCV}.
+  \item Enrich news with \textbf{sentiment scores} (VADER compound).
+  \item Store large time-series data efficiently using \textbf{TimescaleDB}.
+  \item Provide reproducible ETL with \textbf{idempotent loads} and validation.
+  \item Enable analysis via \textbf{SQL queries} and a \textbf{Streamlit dashboard}.
+\end{itemize}
+\end{frame}
+
+% ---------- Research Questions ----------
+\begin{frame}{Research Questions}
+\begin{block}{RQ1}
+How does AI-related news sentiment correlate with intraday volatility and price movement?
+\end{block}
+\begin{block}{RQ2}
+Do certain AI-centric stocks react more strongly to positive/negative headlines?
+\end{block}
+\begin{block}{RQ3}
+How complete and reliable is the integrated dataset (quality + integration coverage)?
+\end{block}
+\end{frame}
+
+% ---------- Data Sources ----------
+\begin{frame}{Data Sources}
+\begin{columns}[T,onlytextwidth]
+\column{0.5\textwidth}
+\textbf{Finnhub (News API)}
+\begin{itemize}
+  \item Historical company news (2025)
+  \item Headline, timestamp, source
+  \item Rate limits + pagination (250 items/request)
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Databento (Market Data)}
+\begin{itemize}
+  \item 1-minute OHLCV bars (2025)
+  \item High reliability for intraday bars
+  \item Large data volume $\rightarrow$ time-series DB needed
+\end{itemize}
+\end{columns}
+\end{frame}
+
+% ---------- Acquisition Constraints ----------
+\begin{frame}{Acquisition Strategy}
+\begin{itemize}
+  \item \textbf{Backfill strategy:} fetch news backwards due to Finnhub limits.
+  \item \textbf{Validation:} Pydantic schemas ensure type correctness.
+  \item \textbf{Repeatable runs:} ETL is designed to be idempotent.
+\end{itemize}
+\end{frame}
+
+% ---------- Storage ----------
+\begin{frame}{Storage: TimescaleDB}
+\begin{itemize}
+  \item PostgreSQL + time-series extension.
+  \item \textbf{Hypertables} partition tick data by time.
+  \item Efficient range queries + indexing on \texttt{(time, ticker)}.
+  \item \textbf{Compression policy} for older data (e.g., > 7 days).
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Why this matters:} 1-min OHLCV for 10 tickers across a year $\rightarrow$ millions of rows.
+\end{frame}
+
+% ---------- Schema ----------
+\begin{frame}{Database Schema (Logical)}
+\begin{itemize}
+  \item \textbf{\texttt{ai\_news\_events}} (relational table)
+  \begin{itemize}
+    \item \texttt{event\_id (PK)}, \texttt{ticker}, \texttt{published\_at}, \texttt{headline}, \texttt{source}
+    \item \texttt{sentiment\_score} $\in [-1,1]$
+  \end{itemize}
+  \vspace{0.2cm}
+  \item \textbf{\texttt{market\_ticks}} (TimescaleDB hypertable)
+  \begin{itemize}
+    \item primary key: \texttt{(time, ticker)}
+    \item \texttt{open, high, low, close, volume}
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+% ---------- Data Quality ----------
+\begin{frame}{Data Quality}
+\begin{itemize}
+  \item \textbf{Completeness:} missing fields (timestamps, OHLCV, headline).
+  \item \textbf{Validity:} sentiment score range, non-negative volume.
+  \item \textbf{Uniqueness:} unique event IDs; unique \texttt{(time, ticker)}.
+  \item \textbf{Consistency:} timezone normalization (UTC) across sources.
+\end{itemize}
+\end{frame}
+
+% ---------- Idempotency ----------
+\begin{frame}{Idempotent ETL \& De-duplication}
+\begin{itemize}
+  \item News insert: \texttt{ON CONFLICT DO NOTHING}
+  \item Market insert: \texttt{ON CONFLICT DO UPDATE}
+  \item Ensures reproducibility and safe re-runs.
+  \item Prevents duplicate rows and supports partial backfills.
+\end{itemize}
+\end{frame}
+
+% ---------- Temporal Data Integration (Professor's Feedback) ----------
+\begin{frame}{Temporal Data Integration Strategy}
+\begin{columns}[T,onlytextwidth]
+\column{0.5\textwidth}
+\textbf{The Challenge:}
+\begin{itemize}
+  \item News occurs 24/7 (continuous).
+  \item Markets trade Mon-Fri, 9:30-16:00 (discrete).
+  \item Naive joins lose off-hours news (weekends, overnight).
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Our Solution:}
+\begin{itemize}
+  \item **Forward-Fill Alignment:** Map events to the \textit{next available} trading tick.
+  \item \textit{Example:} Saturday News $\rightarrow$ Impact measured from Monday 9:30 AM Open.
+  \item **Dynamic Baselines:** Volume baseline calculated on \textit{trading ticks} (last 120 minutes), not wall-clock time.
+\end{itemize}
+\end{columns}
+
+\vspace{0.4cm}
+\textbf{Outcome:} Preserved 100\% of off-market news events while maintaining statistical validity of impact metrics.
+\end{frame}
+
+% ---------- Integration Quality Metrics ----------
+\begin{frame}{Integration Quality Metrics}
+\begin{itemize}
+  \item \textbf{Coverage:} 100\% of News Events mapped to a reaction window.
+  \item \textbf{Latency:} Time delta between publication and market reaction start (0 min for intraday, variable for off-hours).
+  \item \textbf{Volume Normalization:} Ratio of post-news volume vs. pre-news trading average (handling overnight gaps).
+\end{itemize}
+\end{frame}
+
+% ---------- Dashboard ----------
+\begin{frame}{Streamlit Dashboard}
+\begin{itemize}
+  \item Interactive candlestick chart with sentiment-coded news markers.
+  \item Hover tooltips show headline, sentiment score, and time.
+  \item Filters: ticker selection + date range.
+  \item Summary metrics: number of events, average sentiment, volume, price change.
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Demo:} \textit{Price Chart with News Annotations}
+\end{frame}
+
+% ---------- Analysis Examples ----------
+\begin{frame}{Analysis Examples}
+\begin{itemize}
+  \item Identify volatility clusters around major AI headlines.
+  \item Compare average sentiment vs returns across tickers.
+  \item Detect extreme price moves and inspect associated news.
+\end{itemize}
+\end{frame}
+
+% ---------- Reproducibility ----------
+\begin{frame}{Reproducibility}
+\begin{itemize}
+  \item Docker Compose for TimescaleDB deployment.
+  \item \texttt{uv} for dependency management.
+  \item \texttt{.env} configuration for API keys.
+  \item One-command ETL runs + Streamlit launch.
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Repository:} \repo
+\end{frame}
+
+% ---------- Limitations ----------
+\begin{frame}{Limitations}
+\begin{itemize}
+  \item Free-tier API limits can affect backfill completeness.
+  \item VADER sentiment is generic; domain-specific models may improve quality.
+  \item Correlation $\neq$ causation; causal inference is future work.
+\end{itemize}
+\end{frame}
+
+% ---------- Future Work ----------
+\begin{frame}{Future Work}
+\begin{itemize}
+  \item Add anomaly detection to identify ``quake'' events systematically.
+  \item Build automated DQ dashboards (metrics over time).
+  \item Extend to more assets (crypto/forex) and additional APIs.
+  \item Improve temporal integration with richer pre/post windows.
+\end{itemize}
+\end{frame}
+
+% ---------- Conclusion ----------
+\begin{frame}{Conclusion}
+\begin{itemize}
+  \item End-to-end pipeline: acquisition $\rightarrow$ storage $\rightarrow$ profiling $\rightarrow$ integration $\rightarrow$ analysis.
+  \item Efficient time-series database design using TimescaleDB.
+  \item Robust ETL with validation + idempotent loads.
+  \item Interactive dashboard for exploring sentiment-volatility relationships.
+\end{itemize}
+
+\vspace{0.3cm}
+\centering
+\textbf{Thank you!}\\
+\small Questions?
+\end{frame}
+
+\end{document}

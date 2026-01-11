@@ -1,0 +1,258 @@
+
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Packages ----------
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{microtype}
+
+% ---------- Theme / Styling ----------
+\definecolor{Primary}{HTML}{1F4E79}
+\definecolor{Secondary}{HTML}{2E75B6}
+\definecolor{LightGray}{HTML}{F2F2F2}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=Primary,
+  urlcolor=Secondary,
+  citecolor=Primary
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textcolor{Primary}{AINewsQuake}}
+\rhead{\textcolor{Primary}{Data Management Project Report}}
+\cfoot{\thepage}
+
+\titleformat{\section}
+  {\Large\bfseries\color{Primary}}
+  {\thesection}{0.6em}{}
+\titleformat{\subsection}
+  {\large\bfseries\color{Secondary}}
+  {\thesubsection}{0.6em}{}
+
+\setlength{\parskip}{0.55em}
+\setlength{\parindent}{0pt}
+\onehalfspacing
+
+% ---------- Custom Commands ----------
+\newcommand{\projectname}{\textbf{AINewsQuake}}
+\newcommand{\repo}{\href{https://github.com/smabbasht/ainewsquake}{github.com/smabbasht/ainewsquake}}
+
+\begin{document}
+
+% ---------- Cover Page ----------
+\begin{titlepage}
+  \centering
+  \vspace*{1.5cm}
+
+  {\Huge \bfseries \textcolor{Primary}{AINewsQuake}}\\[0.4cm]
+  {\Large \textcolor{Secondary}{Price Chart with News Annotations}}\\[0.8cm]
+
+  \rule{\textwidth}{0.6pt}\\[0.3cm]
+  {\Large \bfseries Data Management Project Report}\\[0.2cm]
+  \rule{\textwidth}{0.6pt}\\[1.2cm]
+
+  \begin{flushleft}
+  \textbf{Course:} Data Management and Data Visualization\\
+  \textbf{Institution:} University of Milano-Bicocca (UNIMIB)\\
+  \textbf{Academic Year:} 2025--2026\\
+  \textbf{Repository:} \repo\\
+  \end{flushleft}
+
+  \vfill
+
+  \begin{flushleft}
+  \textbf{Group Members:}\\
+  Syed Muhammad Abbas Haider Taqvi \\
+  Umeir Mohamed \\
+  Mohammad Amin Saberi\\
+  \end{flushleft}
+
+  \vfill
+  {\large \today}
+
+\end{titlepage}
+
+% ---------- Abstract ----------
+\section*{Abstract}
+\projectname{} is an event-driven data pipeline that investigates the relationship between \textit{AI-related news sentiment} and \textit{intraday stock price dynamics}. The system integrates heterogeneous data sources---a news feed enriched with sentiment scores and high-frequency (1-minute) OHLCV market data---and stores them in a time-series optimized database (TimescaleDB). An interactive Streamlit dashboard visualizes candlestick charts annotated with sentiment-coded news markers, enabling exploratory analysis of how news events align with price movements and volatility. The project demonstrates a complete data management workflow: acquisition, storage, profiling, integration, analysis, and quality improvement, with strong emphasis on reproducibility and scalable time-series querying.
+
+\tableofcontents
+\newpage
+
+% ---------- 1. Introduction ----------
+\section{Introduction}
+Financial markets react quickly to information. In the context of fast-moving technological trends, AI-related announcements and headlines can trigger substantial changes in market behavior. \projectname{} was designed to quantify and visualize the ``seismic impact'' of AI news on price movements, capturing and integrating both \textbf{slow data} (text-based news events) and \textbf{fast data} (high-frequency market microstructure).
+
+The project objective is twofold:
+\begin{enumerate}[label=\textbf{O\arabic*:}, leftmargin=2.2em]
+  \item Build a reproducible pipeline that acquires, stores, integrates, and validates heterogeneous data sources.
+  \item Enable research-driven exploration of market reactions through rigorous SQL analysis and an interactive dashboard.
+\end{enumerate}
+
+\subsection{Research Questions}
+The project answers the following research questions (RQs):
+\begin{itemize}[leftmargin=1.7em]
+  \item \textbf{RQ1:} How does AI-related news sentiment correlate with intraday volatility and price movement for AI-centric stocks?
+  \item \textbf{RQ2:} Do certain stocks react more strongly to positive or negative AI-related headlines (sentiment polarity)?
+  \item \textbf{RQ3:} How complete and reliable is the integrated dataset, and what are the main integration and data quality issues?
+\end{itemize}
+
+\subsection{Scope}
+We focus on 10 AI-centric tickers (NVDA, TSLA, MSFT, GOOGL, AAPL, AMD, PLTR, TSM, SMCI, META) across the year 2025. The system is built to be extendable to additional companies and time periods.
+
+% ---------- 2. Data Sources ----------
+\section{Data Sources and Acquisition}
+\subsection{News Data (Finnhub API)}
+The project uses the Finnhub API for historical company news. Finnhub was selected due to its historical news availability and manageable rate limits (up to 60 calls/minute on the free tier). The API provides event metadata including publication timestamps, headline text, and source information.
+
+\subsection{Market Data (Databento API)}
+High-frequency market data (1-minute OHLCV) is obtained via the Databento API. This source was preferred over alternatives such as Yahoo Finance due to higher reliability for intraday historical bars and consistent timestamp handling.
+
+\subsection{Acquisition Constraints}
+Two practical acquisition constraints shape the design:
+\begin{enumerate}[leftmargin=2em]
+  \item \textbf{API rate limits and pagination:} Finnhub returns at most 250 news items per request.
+  \item \textbf{Data volume:} 1-minute bars across many tickers and a full year produce large datasets requiring efficient storage and indexing.
+\end{enumerate}
+
+% ---------- 3. Storage ----------
+\section{Storage Layer and Database Design}
+\subsection{Why TimescaleDB?}
+TimescaleDB is a PostgreSQL extension optimized for time-series workloads. It provides hypertables, time-based partitioning, native compression policies, and fast range queries. These features are particularly well-suited for market data and time-indexed news events.
+
+\subsection{Logical Schema}
+The pipeline stores two main entities:
+\begin{itemize}[leftmargin=1.7em]
+  \item \textbf{News events table (\texttt{ai\_news\_events}):} stores article headline, timestamp, ticker, source, and sentiment score.
+  \item \textbf{Market hypertable (\texttt{market\_ticks}):} stores 1-minute OHLCV bars keyed by \texttt{(time, ticker)}.
+\end{itemize}
+
+\subsection{Physical Design (Hypertables \& Compression)}
+Market ticks are stored as a TimescaleDB hypertable partitioned by week. Compression is enabled for data older than 7 days, balancing storage efficiency with query performance.
+
+% ---------- 4. Profiling & Data Quality ----------
+\section{Data Profiling and Data Quality}
+\subsection{Validation and Type Safety}
+Before inserting data into the database, records are validated using Pydantic schemas, ensuring type correctness and preventing malformed values from entering persistent storage.
+
+\subsection{Idempotent ETL and De-duplication}
+The ETL pipeline is designed to be idempotent:
+\begin{itemize}[leftmargin=1.7em]
+  \item \textbf{News events} are inserted with \texttt{ON CONFLICT DO NOTHING} using a unique event identifier.
+  \item \textbf{Market ticks} are inserted with \texttt{ON CONFLICT DO UPDATE}, supporting safe re-runs and partial backfills.
+\end{itemize}
+This design prevents duplicate rows and ensures consistency across repeated runs.
+
+\subsection{Quality Metrics (Recommended Reporting)}
+For the final delivery, we recommend reporting key data quality metrics:
+\begin{itemize}[leftmargin=1.7em]
+  \item \textbf{Completeness:} missing values in key fields (timestamp, headline, OHLCV).
+  \item \textbf{Uniqueness:} duplicate event IDs and duplicate (time, ticker) pairs.
+  \item \textbf{Validity:} timestamp format correctness; sentiment score range $[-1, 1]$; non-negative volume.
+  \item \textbf{Consistency:} timezone normalization and alignment between news timestamps and market bars.
+\end{itemize}
+
+% ---------- 5. Integration ----------
+\section{Temporal Data Integration (Professor's Feedback)}
+The most significant challenge in this project was the \textbf{Temporal Data Integration} between continuous event data (News) and discrete market data (Stocks). This addresses the key concern raised during proposal approval.
+
+\subsection{The Challenge: Continuous vs. Discrete Time}
+News events occur 24/7 (including weekends and overnight), whereas stock markets trade only during specific hours (Mon-Fri, 9:30--16:00 EST). A naive SQL join (e.g., \texttt{JOIN ON timestamp}) would result in significant data loss:
+\begin{itemize}[leftmargin=1.7em]
+  \item \textbf{Data Loss:} News published on Saturday or after 16:00 would have no matching market tick.
+  \item \textbf{Misaligned Impact:} A naive look-forward window (e.g., +30 mins) for a Friday 15:50 event would only capture 10 minutes of reaction, biasing the measurement.
+\end{itemize}
+
+\subsection{Our Solution: Forward-Fill Alignment}
+We implemented a robust integration strategy in our ETL pipeline (\texttt{build\_impact\_analysis.py}):
+\begin{itemize}[leftmargin=1.7em]
+  \item \textbf{Next-Tick Alignment:} Every news event is mapped to the \textit{next available} market trading tick. A headline published on Saturday at 14:00 is automatically aligned to the Monday 9:30 Open tick.
+  \item \textbf{Dynamic Baselines:} To measure volume shocks, we calculate a baseline average using the last 120 \textit{trading ticks}, not wall-clock time. This ignores overnight gaps and compares the reaction window against actual prior trading activity.
+\end{itemize}
+
+\subsection{Integration Outcome}
+By determining the \textbf{Reaction Start Time} programmatically:
+\begin{itemize}[leftmargin=1.7em]
+  \item \textbf{Coverage:} We achieved 100\% coverage for news events (all events are mapped to a valid reaction window).
+  \item \textbf{Validity:} Metrics like ``Price Change 30m'' represent 30 minutes of \textit{market activity}, regardless of whether that window spans a weekend gap.
+\end{itemize}
+
+% ---------- 6. Analysis ----------
+\section{Analysis and Visualization}
+\subsection{Dashboard Overview}
+The Streamlit dashboard provides:
+\begin{itemize}[leftmargin=1.7em]
+  \item interactive candlestick charts,
+  \item sentiment-coded news markers,
+  \item hover tooltips showing headline and sentiment,
+  \item total volume visualization and sentiment summaries,
+  \item ticker selection and date-range filters.
+\end{itemize}
+
+\subsection{Implemented Impact Metrics}
+To quantify the "seismic" impact of news, we implemented three core metrics in the dashboard:
+\begin{itemize}[leftmargin=1.7em]
+  \item \textbf{Price Impact:} Percentage change in price (+30 min reaction window).
+  \item \textbf{Volume Spike Ratio:} Ratio of reaction volume vs. 2-hour pre-event baseline.
+  \item \textbf{Volatility Shock:} Intraday high-low range normalized by price.
+\end{itemize}
+
+% ---------- 7. Reproducibility ----------
+\section{Reproducibility and Deployment}
+The project is fully reproducible using Docker and environment variables:
+\begin{enumerate}[leftmargin=2em]
+  \item Create a \texttt{.env} file containing API keys for Finnhub and Databento.
+  \item Start TimescaleDB with Docker Compose.
+  \item Initialize the database schema and run ETL scripts.
+  \item Launch the Streamlit application (locally or via Streamlit Cloud).
+\end{enumerate}
+
+\subsection{Operational Notes}
+The repository uses \texttt{uv} for Python dependency management. The modular repository-service structure enables maintainability and future extensions (additional tickers, additional data sources, alternative sentiment models).
+
+% ---------- 8. Limitations ----------
+\section{Limitations and Future Improvements}
+\subsection{Limitations}
+\begin{itemize}[leftmargin=1.7em]
+  \item Free-tier API limits may cause incomplete backfills if not carefully scheduled.
+  \item Sentiment scoring uses VADER; domain-specific models could provide improved accuracy.
+  \item Correlation does not imply causation; stronger causal inference methods could be explored.
+\end{itemize}
+
+\subsection{Future Improvements}
+\begin{itemize}[leftmargin=1.7em]
+  \item Add more advanced integration windows (e.g., pre/post-event windows).
+  \item Implement anomaly detection models to identify ``quake'' events systematically.
+  \item Add automated data quality dashboards (metrics over time).
+  \item Support more markets (crypto, forex) with additional APIs.
+\end{itemize}
+
+% ---------- 9. Conclusion ----------
+\section{Conclusion}
+\projectname{} demonstrates an end-to-end data management pipeline integrating text-based news with high-frequency market data. The project emphasizes robust acquisition (API backfill under constraints), efficient time-series storage (hypertables and compression), data validation, idempotent loading, and scalable integration for analysis. The Streamlit dashboard enables intuitive exploration of AI news impact on market behavior, addressing the core research questions and satisfying the required phases of the course project.
+
+\vfill
+\section*{References}
+\begin{itemize}[leftmargin=1.7em]
+  \item Project repository: \repo
+  \item TimescaleDB documentation: \url{https://docs.timescale.com/}
+  \item Finnhub API documentation: \url{https://finnhub.io/docs/api}
+  \item Databento documentation: \url{https://databento.com/}
+  \item VADER sentiment: \url{https://github.com/cjhutto/vaderSentiment}
+\end{itemize}
+
+\end{document}
