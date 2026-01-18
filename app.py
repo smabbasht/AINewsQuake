@@ -241,6 +241,7 @@ def create_price_chart_with_news(news_df: pd.DataFrame, market_df: pd.DataFrame,
             name='Volume',
             marker_color=colors,
             opacity=0.7,
+            showlegend=True,
         ),
         row=2, col=1
     )
@@ -252,7 +253,7 @@ def create_price_chart_with_news(news_df: pd.DataFrame, market_df: pd.DataFrame,
             go.Scatter(
                 x=news_df_sorted['published_at'],
                 y=news_df_sorted['sentiment_score'],
-                mode='markers+lines',
+                mode='markers',
                 name='Sentiment',
                 marker=dict(
                     size=8,
@@ -265,7 +266,6 @@ def create_price_chart_with_news(news_df: pd.DataFrame, market_df: pd.DataFrame,
                         len=0.2,
                     ),
                 ),
-                line=dict(color='rgba(102, 126, 234, 0.3)', width=1),
                 text=news_df_sorted['headline'],
                 hovertemplate='<b>%{text}</b><br>Sentiment: %{y:.3f}<extra></extra>',
             ),
@@ -293,6 +293,8 @@ def create_price_chart_with_news(news_df: pd.DataFrame, market_df: pd.DataFrame,
         yaxis2_title="Volume",
         yaxis3_title="Sentiment",
         margin=dict(l=60, r=60, t=80, b=60),
+        bargap=0.1,
+        barmode='overlay',
     )
     
     # Remove rangeslider
@@ -310,7 +312,7 @@ def main():
     
     # Collapsible filters
     all_tickers = ["NVDA", "TSLA", "MSFT", "GOOGL", "AAPL", "AMZN", "AMD", "PLTR", "TSM", "SMCI", "META", "BLK"]
-    default_end = date(2025, 12, 15)
+    default_end = date(2025, 12, 31)
     default_start = date(2025, 1, 1)
 
     with st.expander("⚙️ Chart Configuration", expanded=False):
