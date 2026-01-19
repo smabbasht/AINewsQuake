@@ -38,17 +38,22 @@ load_dotenv()
 render_navbar("Impact")
 
 
-@st.cache_resource
-def get_db_connection():
-    """Get database connection (cached)."""
-    import psycopg2
+@st.cache_data(ttl=60)
+def get_database_url():
+    """Get database URL (cached for 60 seconds)."""
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         st.error("❌ DATABASE_URL not found in environment")
         st.stop()
     
     database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
-    return psycopg2.connect(database_url)
+    return database_url
+
+
+def get_db_connection():
+    """Get a fresh database connection."""
+    import psycopg2
+    return psycopg2.connect(get_database_url())
 
 
 def load_impact_data(
@@ -109,6 +114,7 @@ def load_impact_data(
     df = pd.read_sql_query(query, conn, params=params if params else None)
     df['published_at'] = pd.to_datetime(df['published_at'])
     
+    conn.close()
     return df
 
 

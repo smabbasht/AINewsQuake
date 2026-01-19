@@ -35,19 +35,22 @@ load_dotenv()
 render_navbar("Chart")
 
 
-@st.cache_resource
-def get_db_connection():
-    """Get database connection (cached)."""
-    import psycopg2
+@st.cache_data(ttl=60)
+def get_database_url():
+    """Get database URL (cached for 60 seconds)."""
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         st.error("❌ DATABASE_URL not found in environment")
         st.stop()
     
     # Convert asyncpg URL to psycopg2 URL
-    database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
-    
-    return psycopg2.connect(database_url)
+    return database_url.replace("postgresql+asyncpg://", "postgresql://")
+
+
+def get_db_connection():
+    """Get a fresh database connection."""
+    import psycopg2
+    return psycopg2.connect(get_database_url())
 
 
 def fetch_news_and_market_data(
@@ -104,6 +107,9 @@ def fetch_news_and_market_data(
         params=(ticker, datetime.combine(from_date, datetime.min.time()),
                 datetime.combine(to_date, datetime.max.time()))
     )
+    
+    # Close connection
+    conn.close()
     
     return news_df, market_df
 
