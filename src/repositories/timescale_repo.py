@@ -162,21 +162,34 @@ class TimescaleRepository:
         async with self.SessionLocal() as session:
             inserted_count = 0
             
-            for event in events:
-                stmt = insert(AINewsEvent).values(
-                    event_id=event.event_id,
-                    ticker=event.ticker,
-                    published_at=event.published_at,
-                    headline=event.headline,
-                    source=event.source,
-                    sentiment_score=event.sentiment_score,
-                )
+            # Batch insert for better performance (same as market ticks)
+            batch_size = 1000
+            for i in range(0, len(events), batch_size):
+                batch = events[i : i + batch_size]
+                
+                values = [
+                    {
+                        "event_id": event.event_id,
+                        "ticker": event.ticker,
+                        "published_at": event.published_at,
+                        "headline": event.headline,
+                        "source": event.source,
+                        "sentiment_score": event.sentiment_score,
+                    }
+                    for event in batch
+                ]
+                
+                stmt = insert(AINewsEvent).values(values)
                 stmt = stmt.on_conflict_do_nothing(
                     constraint="uq_news_event"
                 )
                 
                 result = await session.execute(stmt)
                 inserted_count += result.rowcount
+                
+                # Log progress for large batches
+                if len(events) > batch_size:
+                    logger.info(f"Inserted batch {i//batch_size + 1}/{(len(events)-1)//batch_size + 1} ({inserted_count} so far)")
             
             await session.commit()
             logger.info(f"Inserted {inserted_count} news events (out of {len(events)})")
