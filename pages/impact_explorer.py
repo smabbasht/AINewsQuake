@@ -126,7 +126,7 @@ def main():
             all_tickers = ["All", "NVDA", "TSLA", "MSFT", "GOOGL", "AAPL", "AMZN", "AMD", "PLTR", "TSM", "SMCI", "META", "BLK"]
             selected_ticker = st.selectbox("Select Ticker", all_tickers, index=0)
         with col2:
-            default_end = date(2025, 12, 15)
+            default_end = date(2025, 12, 31)
             default_start = date(2025, 1, 1)
             from_date = st.date_input("From Date", value=default_start, min_value=date(2025, 1, 1), max_value=default_end)
         with col3:

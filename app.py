@@ -239,8 +239,10 @@ def create_price_chart_with_news(news_df: pd.DataFrame, market_df: pd.DataFrame,
             x=hourly['time'],
             y=hourly['volume'],
             name='Volume',
-            marker_color=colors,
-            opacity=0.7,
+            marker=dict(
+                color=colors,
+                line=dict(width=0)
+            ),
             showlegend=True,
         ),
         row=2, col=1
@@ -293,8 +295,6 @@ def create_price_chart_with_news(news_df: pd.DataFrame, market_df: pd.DataFrame,
         yaxis2_title="Volume",
         yaxis3_title="Sentiment",
         margin=dict(l=60, r=60, t=80, b=60),
-        bargap=0.1,
-        barmode='overlay',
     )
     
     # Remove rangeslider
